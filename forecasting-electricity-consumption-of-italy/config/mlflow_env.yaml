@@ -20,3 +20,6 @@ dependencies:
       - sklearn
       - mlflow
       - xgboost
+      - google-cloud-storage
+      - boto3
+      - google-cloud-datastore

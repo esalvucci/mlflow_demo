@@ -37,6 +37,7 @@ from urllib.parse import urlparse
 import sys
 
 import mlflow
+import os
 
 # ## Loading the data
 
@@ -48,6 +49,8 @@ import mlflow
 STUDY_START_DATE = pd.Timestamp("2015-01-01 00:00", tz="utc")
 STUDY_END_DATE = pd.Timestamp("2020-01-31 23:00", tz="utc")
 
+import os
+os.environ['GOOGLE_APPLICATION_CREDENTIALS']='../../MLflow_demo-d9ad0567abe1.json'
 
 # The German load data is originally available with 15-min resolution. We have resampled it on an hourly basis for this analysis.
 
@@ -101,7 +104,7 @@ def plot_predictions(pred_df, start=None, end=None):
     ax.set_title("Predictions on test set")
     ax.set_ylabel("MW")
     ax.grid()
-    figure.savefig('predictions.png', bbox_inches="tight")
+    figure.savefig('artifacts/predictions.png', bbox_inches="tight")
 
 
 def compute_predictions_df(model, X, y):
@@ -327,9 +330,20 @@ learning_rate = float(sys.argv[2])
 max_depth = int(sys.argv[3])
 min_child_weight = int(sys.argv[4])
 
+experiment_name = "MLFlow Demo"
+## check if the experiment already exists
+if not mlflow.get_experiment_by_name(experiment_name):
+    mlflow.create_experiment(name=experiment_name)
+experiment = mlflow.get_experiment_by_name(experiment_name)
+
+from google.cloud import storage
+client = storage.Client()
+
+#mlflow.set_tracking_uri(tracking_uri)
+
 # Three models will be trained for our prediction task : a simple linear models with L1 and L2 regularisation, a random forest, and gradient boosting model (based on XGBoost library).
-with mlflow.start_run():
-    mlflow.set_experiment('/mlflow_test/electricity-consumption-of-italy')
+with mlflow.start_run(experiment_id=experiment.experiment_id):
+#    mlflow.set_experiment('/mlflow_test/electricity-consumption-of-italy')
 
     mlflow.log_param("n_estimators", n_estimators)
     mlflow.log_param("learning_rate", learning_rate)
@@ -355,13 +369,8 @@ with mlflow.start_run():
 
     import mlflow.xgboost
 
-    tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
-    if tracking_url_type_store != "file":
-        # Register the model
-        mlflow.xgboost.log_model(final_model, "XGB Regressor Model",
-                                 registered_model_name="XGB Regressor Model")
-    else:
-        mlflow.xgboost.log_model(final_model, "XGB Regressor Model")
+    # Register the model
+    mlflow.xgboost.log_model(final_model, "XGB Regressor Model")
 
     # Let's group predicted and actual test data into a data frame
     pred_df = compute_predictions_df(
@@ -411,4 +420,4 @@ with mlflow.start_run():
                      start=pd.Timestamp("2020-01-23", tz="utc"),
                      end=pd.Timestamp("2020-01-26", tz="utc"))
 
-    mlflow.log_artifact("predictions.png")
+    mlflow.log_artifact("artifacts/predictions.png")
