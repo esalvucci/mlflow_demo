@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 */artifacts/*
+*/.idea/
+*/.ipynb_checkpoints/
 mlruns/*
 .idea/
 .ipynb_checkpoints/
