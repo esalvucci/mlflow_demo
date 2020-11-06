@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # MLFlow Demo - Forecasting hourly electricity consumption of Italy
-
+# MLFlow Demo - Forecasting hourly electricity consumption of Italy
 # [From Kaggle - "Forecasting electricity consumption of Germany" Notebook](https://www.kaggle.com/francoisraucent/forecasting-electricity-consumption-of-germany)
 # 
 # Electricity grid and market have become increasingly challenging to operate and maintain in the recent years. In particular, one of the main responsibilities of transmission system operators and aggregators consists in maintaining balance between production and consumption. With the development and spread of renewable energy sources, production has become more intermittent which requires even more effort to maintain the balance.
@@ -26,31 +25,20 @@ from sklearn.preprocessing import (
 )
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import (
-    train_test_split, KFold, GridSearchCV, ParameterGrid,
+    train_test_split, ParameterGrid,
 )
 from sklearn.metrics import mean_squared_error
 from sklearn.linear_model import SGDRegressor
 from sklearn.ensemble import RandomForestRegressor
-from xgboost import XGBRegressor, DMatrix, plot_importance
+from xgboost import XGBRegressor, DMatrix
 from xgboost import cv as xgb_cv
-from urllib.parse import urlparse
 import sys
 
 import mlflow
-import os
-
-# ## Loading the data
 
 # We will work with consumption data ranging from Jan 2015 to Jan 2020.
-
-# In[22]:
-
-
 STUDY_START_DATE = pd.Timestamp("2015-01-01 00:00", tz="utc")
 STUDY_END_DATE = pd.Timestamp("2020-01-31 23:00", tz="utc")
-
-import os
-os.environ['GOOGLE_APPLICATION_CREDENTIALS']='../../MLflow_demo-d9ad0567abe1.json'
 
 # The German load data is originally available with 15-min resolution. We have resampled it on an hourly basis for this analysis.
 
@@ -226,55 +214,30 @@ df_train, df_test = split_train_test(
 ax = df_train["load"].plot(figsize=(12, 4), color="tab:blue")
 _ = df_test["load"].plot(ax=ax, color="tab:orange", ylabel="MW")
 
-
-# ## Data preparation
-
+# Data preparation
 # There are no missing observations in our training data (there actually were a few missing observations on 15-min granularity, but we took care of these with hourly aggregation when loading the data).
-
-df_train.loc[df_train["load"].isna(), :].index
-
-# ### Create features for training
-
+# Create features for training
 # The following features are used for training our forecast models :
 # * time features: month, weekday and hour
 # * national holiday features, as a boolean time series
 # * lag features: load data with a lag values ranging from 24 to 48 hours
 
-# In[27]:
-
 # The lag features introduce a few missing values which we will move out of the analysis. The features of our training set are then the following :
-
-# In[28]:
-
-
 df_train = add_all_features(df_train).dropna()
 df_test = add_all_features(df_test).dropna()
 df_train.info()
 
-
 # We then separate target values from features into distinct data frames.
-
-# In[29]:
-
-
 target_col = "load"
 X_train = df_train.drop(columns=target_col)
 y_train = df_train.loc[:, target_col]
 X_test = df_test.drop(columns=target_col)
 y_test = df_test.loc[:, target_col]
 
-
-# ### Data preparation pipeline
-
+# Data preparation pipeline
 # We'll use the following data preparation pipeline to apply one-hot encoders on categorical feratures (time features), and a standard scaler on numerical features (lag features).
 
-# In[30]:
-
 # We then fit pipeline on training data, and apply it on training and test sets
-
-# In[31]:
-
-
 feature_names, prep_pipeline = fit_prep_pipeline(X_train)
 
 X_train_prep = prep_pipeline.transform(X_train)
@@ -302,9 +265,7 @@ rf_steps, rf_train_mse, rf_val_mse = compute_learning_curves(
 
 plot_learning_curves(rf_steps, rf_train_mse, rf_val_mse, title="Random forest")
 
-
 # XGBoost model pushes RMSE even further to 2050MW with training RMSE of only 260MW. This indicates once again that our model is overfitting the training data. We will try to handle the overfitting later on at model fine-tuning step.
-
 xgb_steps, xgb_train_mse, xgb_val_mse = compute_learning_curves(
     xgb_model, X_train_prep, y_train, 500, verbose=True
 )
@@ -336,14 +297,9 @@ if not mlflow.get_experiment_by_name(experiment_name):
     mlflow.create_experiment(name=experiment_name)
 experiment = mlflow.get_experiment_by_name(experiment_name)
 
-from google.cloud import storage
-client = storage.Client()
-
-#mlflow.set_tracking_uri(tracking_uri)
-
 # Three models will be trained for our prediction task : a simple linear models with L1 and L2 regularisation, a random forest, and gradient boosting model (based on XGBoost library).
 with mlflow.start_run(experiment_id=experiment.experiment_id):
-#    mlflow.set_experiment('/mlflow_test/electricity-consumption-of-italy')
+    #    mlflow.set_experiment('/mlflow_test/electricity-consumption-of-italy')
 
     mlflow.log_param("n_estimators", n_estimators)
     mlflow.log_param("learning_rate", learning_rate)
@@ -370,7 +326,7 @@ with mlflow.start_run(experiment_id=experiment.experiment_id):
     import mlflow.xgboost
 
     # Register the model
-    mlflow.xgboost.log_model(final_model, "XGB Regressor Model")
+    mlflow.xgboost.log_model(final_model, "XGB_regressor_model")
 
     # Let's group predicted and actual test data into a data frame
     pred_df = compute_predictions_df(
