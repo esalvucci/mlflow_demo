@@ -25,6 +25,8 @@
     sudo upgrade
     # Install pip
     sudo apt install -y python3-pip
+    python3 -m pip install -U six
+    
     export PATH="$HOME/.local/bin:$PATH"
     # Install mlflow and google cloud storage
     pip3 install mlflow google-cloud-storage
