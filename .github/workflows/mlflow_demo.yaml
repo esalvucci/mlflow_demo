@@ -1,0 +1,26 @@
+name: mlflow-demo
+on: [push]
+jobs:
+  run:
+    runs-on: [ubuntu-latest]
+    container: docker://dvcorg/cml-py3:latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: mlflow_demo_run
+        env:
+          repo_token: $({ secrets.GITHUB_TOKEN })
+        run: |
+                # Yout ML workflow goes here
+                sudo apt update
+                sudo upgrade
+                # Install pip
+                sudo apt install -y python3-pip
+                python3 -m pip install -U six
+
+                export PATH="$HOME/.local/bin:$PATH"
+                # Install mlflow and google cloud storage
+                pip3 install mlflow
+                
+                mlflow run forecasting-electricity-consumption-of-italy
+                
+                
